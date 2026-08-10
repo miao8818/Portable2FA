@@ -141,6 +141,98 @@ namespace Portable2FA
         }
     }
 
+    internal sealed class UserAddButton : Button
+    {
+        private bool hovered;
+        private bool pressed;
+
+        public UserAddButton()
+        {
+            Text = "新增账户";
+            FlatStyle = FlatStyle.Flat;
+            FlatAppearance.BorderSize = 0;
+            UseVisualStyleBackColor = false;
+            BackColor = Palette.Accent;
+            ForeColor = Color.White;
+            Cursor = Cursors.Hand;
+            TabStop = false;
+            Font = new Font("Microsoft YaHei UI", 8.5F, FontStyle.Bold);
+            SetStyle(ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint |
+                     ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw, true);
+        }
+
+        protected override void OnMouseEnter(EventArgs e)
+        {
+            hovered = true;
+            Invalidate();
+            base.OnMouseEnter(e);
+        }
+
+        protected override void OnMouseLeave(EventArgs e)
+        {
+            hovered = false;
+            pressed = false;
+            Invalidate();
+            base.OnMouseLeave(e);
+        }
+
+        protected override void OnMouseDown(MouseEventArgs mevent)
+        {
+            if (mevent.Button == MouseButtons.Left)
+            {
+                pressed = true;
+                Invalidate();
+            }
+            base.OnMouseDown(mevent);
+        }
+
+        protected override void OnMouseUp(MouseEventArgs mevent)
+        {
+            pressed = false;
+            Invalidate();
+            base.OnMouseUp(mevent);
+        }
+
+        protected override void OnPaint(PaintEventArgs pevent)
+        {
+            Color fill = pressed ? Color.FromArgb(11, 119, 111) :
+                (hovered ? Palette.AccentHover : Palette.Accent);
+            pevent.Graphics.Clear(fill);
+            pevent.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+
+            float scale = Math.Max(1F, Height / 32F);
+            int centerY = Height / 2;
+            int headLeft = (int)Math.Round(9F * scale);
+            int headSize = (int)Math.Round(6F * scale);
+            int bodyLeft = (int)Math.Round(6F * scale);
+            int bodyWidth = (int)Math.Round(11F * scale);
+            int bodyHeight = (int)Math.Round(10F * scale);
+            int plusX = (int)Math.Round(23F * scale);
+            int plusHalf = (int)Math.Round(3F * scale);
+            int textLeft = (int)Math.Round(31F * scale);
+            int textInset = (int)Math.Round(5F * scale);
+            using (Pen pen = new Pen(Color.White, 1.6F * scale))
+            {
+                pen.StartCap = LineCap.Round;
+                pen.EndCap = LineCap.Round;
+                pevent.Graphics.DrawEllipse(pen, headLeft, centerY - (int)Math.Round(8F * scale),
+                    headSize, headSize);
+                pevent.Graphics.DrawArc(pen, bodyLeft, centerY - (int)Math.Round(1F * scale),
+                    bodyWidth, bodyHeight, 200, 140);
+                pevent.Graphics.DrawLine(pen, plusX, centerY - plusHalf, plusX,
+                    centerY + plusHalf);
+                pevent.Graphics.DrawLine(pen, plusX - plusHalf, centerY, plusX + plusHalf,
+                    centerY);
+            }
+
+            Rectangle textBounds = new Rectangle(textLeft, 0,
+                Math.Max(1, Width - textLeft - textInset), Height);
+            TextRenderer.DrawText(pevent.Graphics, Text, Font, textBounds, Color.White,
+                TextFormatFlags.VerticalCenter | TextFormatFlags.Left |
+                TextFormatFlags.NoPadding | TextFormatFlags.SingleLine);
+        }
+    }
+
     internal sealed class IconButton : Button
     {
         public enum IconKind { Paste, Image, Crosshair, Eye, EyeOff }

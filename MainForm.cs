@@ -78,12 +78,13 @@ namespace Portable2FA
             sidebar.BackColor = Color.White;
             Controls.Add(sidebar);
 
-            Label accountsTitle = NewLabel("账户库", 18, 15, 120, 30, 13F,
+            Label accountsTitle = NewLabel("账户库", 18, 15, 90, 30, 13F,
                 FontStyle.Bold, Palette.Ink);
             sidebar.Controls.Add(accountsTitle);
 
-            Button addAccount = NewFlatButton("+  新增账户", 122, 13, 100, 32, true);
-            addAccount.Font = new Font("Microsoft YaHei UI", 8.5F, FontStyle.Bold);
+            UserAddButton addAccount = new UserAddButton();
+            addAccount.Location = new Point(122, 13);
+            addAccount.Size = new Size(100, 32);
             addAccount.Click += delegate { StartNewAccount(); };
             sidebar.Controls.Add(addAccount);
 
