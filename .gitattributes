@@ -9,3 +9,4 @@
 *.ico binary
 *.png binary
 *.exe binary
+*.dll binary

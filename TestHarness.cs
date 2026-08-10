@@ -1,10 +1,15 @@
 using System;
 using System.Text;
 using Portable2FA;
+using System.Drawing;
+using System.Collections.Generic;
+using ZXing;
+using ZXing.Common;
 
 internal static class TestHarness
 {
     private static int failures;
+    private static int checks;
 
     private static void Main()
     {
@@ -40,21 +45,63 @@ internal static class TestHarness
         Check("URI options", "SHA256/8/45",
             uri.Algorithm + "/" + uri.Digits + "/" + uri.Period);
 
+        string qrUri = "otpauth://totp/QR%3Atest%40example.com?secret=" + encoded +
+            "&issuer=QR&algorithm=SHA1&digits=6&period=30";
+        BarcodeWriter writer = new BarcodeWriter();
+        writer.Format = BarcodeFormat.QR_CODE;
+        writer.Options = new EncodingOptions { Width = 320, Height = 320, Margin = 2 };
+        using (Bitmap qr = writer.Write(qrUri))
+            Check("QR image decoder", qrUri, QrCodeDecoder.Decode(qr));
+
+        using (Bitmap blank = new Bitmap(160, 160))
+            ExpectFormatException("Blank image rejection", delegate { QrCodeDecoder.Decode(blank); });
+
+        string longLabel = "a.very.long.email.address+portable2fa@example-enterprise.example";
+        SavedAccount saved = SavedAccount.FromProfile(uri, longLabel, "Example",
+            "user@mail.test", "test-account-id");
+        SavedAccount restored = SavedAccount.FromCredential(saved.Id, saved.ToCredentialValue());
+        Check("Long label account roundtrip", longLabel + "/Example/user@mail.test/SHA256/8/45",
+            restored.Label + "/" + restored.Issuer + "/" + restored.Account + "/" +
+            restored.Algorithm + "/" + restored.Digits + "/" + restored.Period);
+
+        List<SavedAccount> vaultItems = new List<SavedAccount>();
+        vaultItems.Add(saved);
+        byte[] protectedVault = VaultStore.ProtectAccounts(vaultItems);
+        List<SavedAccount> unprotectedVault = VaultStore.UnprotectAccounts(protectedVault);
+        Check("DPAPI vault roundtrip", saved.Secret, unprotectedVault[0].Secret);
+
+        Check("Windows Credential Locker availability", "True",
+            WindowsCredentialSync.IsAvailable().ToString());
+
         if (failures != 0)
         {
             Console.Error.WriteLine("FAILED: " + failures + " test(s)");
             Environment.Exit(1);
         }
 
-        Console.WriteLine("PASS: 22 checks (RFC 6238 + Base32 + otpauth parsing)");
+        Console.WriteLine("PASS: " + checks +
+            " checks (RFC 6238 + Base32 + otpauth + QR + account vault + Credential Locker)");
     }
 
     private static void Check(string name, string expected, string actual)
     {
+        checks++;
         if (!string.Equals(expected, actual, StringComparison.Ordinal))
         {
             failures++;
             Console.Error.WriteLine(name + ": expected " + expected + ", got " + actual);
         }
+    }
+
+    private static void ExpectFormatException(string name, Action action)
+    {
+        checks++;
+        try
+        {
+            action();
+            failures++;
+            Console.Error.WriteLine(name + ": expected FormatException");
+        }
+        catch (System.FormatException) { }
     }
 }

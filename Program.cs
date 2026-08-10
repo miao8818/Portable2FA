@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -19,8 +20,15 @@ namespace Portable2FA
         private const string EventName = "Local\\Portable2FA_Activate_3BEAB9D0_6DE2_4D89_92A5_33C38B9E7D31";
 
         [STAThread]
-        private static void Main()
+        private static void Main(string[] args)
         {
+            AppDomain.CurrentDomain.AssemblyResolve += ResolveEmbeddedDependency;
+            bool startHidden = args != null && Array.Exists(args,
+                delegate(string value)
+                {
+                    return value.Equals("--startup", StringComparison.OrdinalIgnoreCase);
+                });
+
             bool ownsMutex;
             using (Mutex mutex = new Mutex(true, MutexName, out ownsMutex))
             {
@@ -36,7 +44,7 @@ namespace Portable2FA
 
                 using (EventWaitHandle activation = new EventWaitHandle(
                     false, EventResetMode.AutoReset, EventName))
-                using (MainForm form = new MainForm())
+                using (MainForm form = new MainForm(startHidden))
                 {
                     RegisteredWaitHandle waiter = ThreadPool.RegisterWaitForSingleObject(
                         activation,
@@ -66,6 +74,31 @@ namespace Portable2FA
                     activation.Set();
             }
             catch (WaitHandleCannotBeOpenedException) { }
+        }
+
+        private static Assembly ResolveEmbeddedDependency(object sender, ResolveEventArgs args)
+        {
+            AssemblyName requested = new AssemblyName(args.Name);
+            if (!requested.Name.Equals("zxing", StringComparison.OrdinalIgnoreCase))
+                return null;
+
+            using (Stream stream = Assembly.GetExecutingAssembly().GetManifestResourceStream(
+                "Portable2FA.Dependencies.zxing.dll"))
+            {
+                if (stream == null)
+                    return null;
+
+                byte[] data = new byte[stream.Length];
+                int offset = 0;
+                while (offset < data.Length)
+                {
+                    int read = stream.Read(data, offset, data.Length - offset);
+                    if (read == 0)
+                        break;
+                    offset += read;
+                }
+                return Assembly.Load(data);
+            }
         }
     }
 }

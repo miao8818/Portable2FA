@@ -143,7 +143,7 @@ namespace Portable2FA
 
     internal sealed class IconButton : Button
     {
-        public enum IconKind { Paste, Eye, EyeOff }
+        public enum IconKind { Paste, Image, Crosshair, Eye, EyeOff }
         public IconKind Kind { get; set; }
         private bool hovered;
 
@@ -193,6 +193,27 @@ namespace Portable2FA
                 {
                     pevent.Graphics.DrawRectangle(pen, cx - 7, cy - 7, 14, 16);
                     pevent.Graphics.DrawRectangle(pen, cx - 4, cy - 10, 8, 5);
+                }
+                else if (Kind == IconKind.Image)
+                {
+                    pevent.Graphics.DrawRectangle(pen, cx - 9, cy - 8, 18, 16);
+                    pevent.Graphics.DrawEllipse(pen, cx + 3, cy - 5, 3, 3);
+                    pevent.Graphics.DrawLines(pen, new Point[]
+                    {
+                        new Point(cx - 7, cy + 5),
+                        new Point(cx - 2, cy),
+                        new Point(cx + 1, cy + 3),
+                        new Point(cx + 4, cy),
+                        new Point(cx + 8, cy + 5)
+                    });
+                }
+                else if (Kind == IconKind.Crosshair)
+                {
+                    pevent.Graphics.DrawEllipse(pen, cx - 7, cy - 7, 14, 14);
+                    pevent.Graphics.DrawLine(pen, cx, cy - 10, cx, cy - 4);
+                    pevent.Graphics.DrawLine(pen, cx, cy + 4, cx, cy + 10);
+                    pevent.Graphics.DrawLine(pen, cx - 10, cy, cx - 4, cy);
+                    pevent.Graphics.DrawLine(pen, cx + 4, cy, cx + 10, cy);
                 }
                 else
                 {

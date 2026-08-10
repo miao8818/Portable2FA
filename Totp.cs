@@ -13,6 +13,7 @@ namespace Portable2FA
         public int Digits { get; set; }
         public int Period { get; set; }
         public string AccountLabel { get; set; }
+        public string Issuer { get; set; }
 
         public TotpProfile()
         {
@@ -20,6 +21,7 @@ namespace Portable2FA
             Digits = 6;
             Period = 30;
             AccountLabel = string.Empty;
+            Issuer = string.Empty;
         }
     }
 
@@ -60,8 +62,16 @@ namespace Portable2FA
             TotpProfile profile = new TotpProfile();
             profile.Secret = DecodeBase32(secret);
             profile.AccountLabel = Uri.UnescapeDataString(uri.AbsolutePath.TrimStart('/'));
-
             string value;
+            if (query.TryGetValue("issuer", out value))
+                profile.Issuer = value;
+            if (string.IsNullOrWhiteSpace(profile.Issuer))
+            {
+                int separator = profile.AccountLabel.IndexOf(':');
+                if (separator > 0)
+                    profile.Issuer = profile.AccountLabel.Substring(0, separator).Trim();
+            }
+
             if (query.TryGetValue("algorithm", out value))
             {
                 value = value.ToUpperInvariant().Replace("-", string.Empty);
@@ -164,6 +174,33 @@ namespace Portable2FA
                 throw new FormatException("密钥长度不足");
 
             return output.ToArray();
+        }
+
+        public static string EncodeBase32(byte[] data)
+        {
+            if (data == null || data.Length == 0)
+                throw new ArgumentException("密钥内容为空");
+
+            const string alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+            StringBuilder output = new StringBuilder((data.Length * 8 + 4) / 5);
+            int buffer = 0;
+            int bitsLeft = 0;
+
+            for (int i = 0; i < data.Length; i++)
+            {
+                buffer = (buffer << 8) | data[i];
+                bitsLeft += 8;
+                while (bitsLeft >= 5)
+                {
+                    bitsLeft -= 5;
+                    output.Append(alphabet[(buffer >> bitsLeft) & 31]);
+                    buffer &= (1 << bitsLeft) - 1;
+                }
+            }
+
+            if (bitsLeft > 0)
+                output.Append(alphabet[(buffer << (5 - bitsLeft)) & 31]);
+            return output.ToString();
         }
 
         private static HMAC CreateHmac(string algorithm, byte[] secret)
