@@ -1,0 +1,13 @@
+# Local build output
+/bin/
+/Portable2FA.exe
+/release/
+/qa/
+
+# IDE and operating-system files
+.vs/
+*.user
+*.suo
+*.tmp
+Thumbs.db
+Desktop.ini
